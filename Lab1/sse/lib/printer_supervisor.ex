@@ -1,26 +1,34 @@
 defmodule PrinterSupervisor do
   use Supervisor
 
-  def create([lambda, min_sleep_time, max_sleep_time, nr]) do
-    {:ok, supervisor} = Supervisor.start_link(__MODULE__, [lambda, min_sleep_time, max_sleep_time, nr], name: __MODULE__)
+  def create([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests]) do
+    {:ok, supervisor} = Supervisor.start_link(__MODULE__, [lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests], name: __MODULE__)
     IO.puts("-> Printer Supervisor started with PID: #{inspect supervisor}\n")
   end
 
-  def init([lambda, min_sleep_time, max_sleep_time, nr]) do
+  def init([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests]) do
     children = [
       %{
         id: :load_balancer,
-        start: {LoadBalancer, :start, [nr]},
-        restart: :permanent,
+        start: {LoadBalancer, :start, [nr_of_workers]},
+        restart: :transient,
+        shutdown: 5000,
+        type: :worker,
+        max_restarts: 99999
+      },
+      %{
+        id: :workers_manager,
+        start: {WorkersManager, :start, [[lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests]]},
+        restart: :transient,
         shutdown: 5000,
         type: :worker,
         max_restarts: 99999
       }
-    ] ++ Enum.map(1..nr, fn i ->
+    ] ++ Enum.map(1..nr_of_workers, fn i ->
       %{
         id: i,
         start: {Printer, :start, [[lambda, min_sleep_time, max_sleep_time, i]]},
-        restart: :permanent,
+        restart: :transient,
         shutdown: 5000,
         type: :worker,
         max_restarts: 99999
@@ -31,7 +39,7 @@ defmodule PrinterSupervisor do
       %{
         id: :hashtag_printer,
         start: {HashtagPrinter, :start, []},
-        restart: :permanent,
+        restart: :transient,
         shutdown: 5000,
         type: :worker,
         max_restarts: 99999
@@ -51,8 +59,30 @@ defmodule PrinterSupervisor do
   end
 
   def print(tweet) do
-    id = LoadBalancer.acquire_printer()
-    pid = get_worker(id)
+    ids = LoadBalancer.acquire_printer()
+    pids = Enum.map(ids, fn id -> get_worker(id) end)
+    pid = hd(pids)
     Printer.print(pid, {pid, tweet})
+  end
+
+  def create_new_worker(state) do
+    i = LoadBalancer.check_state
+    Supervisor.start_child(__MODULE__, %{
+      id: i,
+      start: {Printer, :start, [[state.lambda, state.min_sleep_time, state.max_sleep_time, i]]},
+      restart: :transient,
+      shutdown: 5000,
+      type: :worker,
+      max_restarts: 99999
+    })
+    LoadBalancer.update_state(i)
+  end
+
+  def remove_worker do
+    id = LoadBalancer.get_id
+    pid = get_worker(id)
+    Process.exit(pid, :shutdown)
+    IO.puts("-> Printer #{id} has been terminated")
+    LoadBalancer.remove_from_state(id)
   end
 end

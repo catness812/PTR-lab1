@@ -5,10 +5,9 @@ This repository contains the second laboratory work for the Real-Time Programmin
 | :---:                | :---:              |
 | Week 1               | :white_check_mark: |
 | Week 2               | :white_check_mark: |
-| Week 3               | :on:               |
-| Week 4               | :soon:             |
+| Week 3               | :white_check_mark: |
+| Week 4               | :on:               |
 | Week 5               | :soon:             |
-
 
 ## Diagrams
 
@@ -26,10 +25,10 @@ Readers ->> Hashtag Printer: get and print hashtags
 
 ```mermaid
 graph TD 
-    A[Supervisor] --> B[Reader 1];
-    A[Supervisor] --> C[Reader 2];
-    A[Supervisor] --> D[Printer];
-    A[Supervisor] --> E[Hashtag Printer];
+    A[Sup Sup] --> B[Reader 1];
+    A[Sup Sup] --> C[Reader 2];
+    A[Sup Sup] --> D[Printer];
+    A[Sup Sup] --> E[Hashtag Printer];
 ```
 
 ### Week 2
@@ -50,12 +49,45 @@ Readers ->> Hashtag Printer: get and print hashtags
 #### Supervision Tree
 
 ```mermaid
-graph TD 
-    A[Reader 1];
-    B[Reader 2];
-    C[Printer Supervisor] --> E[Load Balancer];
-    C[Printer Supervisor] --> F[Printer 1];
-    C[Printer Supervisor] --> G[Printer 2];
-    C[Printer Supervisor] --> H[Printer 3];
-    C[Printer Supervisor] --> I[Hashtag Printer];
+graph TD
+    A[Sup Sup] --> B[Reader 1];
+    A[Sup Sup] --> C[Reader 2];
+    A[Sup Sup] --> D[Printer Supervisor];
+    D[Printer Supervisor] --> E[Load Balancer];
+    D[Printer Supervisor] --> F[Printer 1];
+    D[Printer Supervisor] --> G[Printer 2];
+    D[Printer Supervisor] --> H[Printer 3];
+    D[Printer Supervisor] --> I[Hashtag Printer];
+```
+
+### Week 3
+
+#### Message Flow
+
+```mermaid
+sequenceDiagram
+Readers ->> Printer Supervisor: get tweets
+Printer Supervisor ->> Load Balancer: acquire printer
+Load Balancer -->> Printer Supervisor: return first 3 printer ids with the least prints
+Load Balancer ->> Workers Manager: analyze the total nr of workers and prints
+Workers Manager ->> Printer Supervisor: manage nr of workers
+Printer Supervisor ->> Load Balancer: get id to either add or remove
+Load Balancer -->> Printer Supervisor: return id
+Printer Supervisor ->> Printers: send to first id received to print tweet
+Printers ->> Load Balancer: release printer
+
+Readers ->> Hashtag Printer: get and print hashtags
+```
+
+#### Supervision Tree
+
+```mermaid
+graph TD
+    A[Sup Sup] --> B[Reader 1];
+    A[Sup Sup] --> C[Reader 2];
+    A[Sup Sup] --> D[Printer Supervisor];
+    D[Printer Supervisor] --> E[Load Balancer];
+    D[Printer Supervisor] --> F[Workers Manager];
+    D[Printer Supervisor] --> G[Printers];
+    D[Printer Supervisor] --> H[Hashtag Printer];
 ```

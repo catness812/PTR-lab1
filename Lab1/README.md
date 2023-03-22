@@ -24,7 +24,7 @@ on screen.
 - [x] Initialize a VCS repository for your project.
 
 - [x] Write an actor that would read SSE streams. The SSE streams for this lab
-are available on Docker Hub at `alexburlacu/rtp-server, courtesy of our beloved FAFer Alex
+are available on [Docker Hub](https://hub.docker.com/) at `alexburlacu/rtp-server, courtesy of our beloved FAFer Alex
 Burlacu.
 
 - [x] Create an actor that would print on the screen the tweets it receives from
@@ -59,4 +59,40 @@ trigger the supervisor to restart the crashed actor.
 
 ### Bonus Task 
 
-- [x] Continue your Load Balancer actor. Modify the actor to implement the “Least connected” algorithm for load balancing (or other interesting algorithm). Refer to this article by Tony Allen.
+- [x] Continue your Load Balancer actor. Modify the actor to implement the “Least connected” algorithm for load balancing (or other interesting algorithm). Refer to [this article](https://blog.envoyproxy.io/examining-load-balancing-algorithms-with-envoy-1be643ea121c) by Tony Allen.
+
+## Week 3
+
+### Minimal Task
+
+- [x] Continue your Worker actor. Any bad words that a tweet might contain mustn’t be printed. Instead, a set of stars should appear, the number of which corresponds to the bad word’s length. Consult the Internet for a list of bad words.
+
+### Main Task
+
+- [x] Create an actor that would manage the number of Worker actors in the Worker Pool. When the actor detects an increase in incoming tasks, it should instruct the Worker Pool to also increase the number of workers. Conversely, if the number of tasks in the stream is low, the actor should dictate to reduce the number of workers (down to a certain limit). The limit, and any other parameters of this actor, should of course be parameterizable.
+
+### Bonus Task
+
+- [x] Enhance your Worker Pool to also implement speculative execution of tasks.
+
+## Week 4
+
+### Minimal Task
+
+- [ ] Continue your Worker actor. Besides printing out the redacted tweet text, the Worker actor must also calculate two values: the Sentiment Score and the Engagement Ratio of the tweet. To compute the Sentiment Score per tweet you should calculate the mean of emotional scores of each word in the tweet text. A map that links words with their scores is provided as an endpoint in the Docker container. If a word cannot be found in the map, it’s emotional score is equal to 0. The Engagement Ratio should be calculated as follows:
+
+```math
+    engagement\_ratio = \frac{\#favourites + \#retweets}{\#followers}
+```
+
+### Main Task
+
+- [ ] Break up the logic of your current Worker into 3 separate actors: one which redacts the tweet text, another that calculates the Sentiment Score and lastly, one that computes the Engagement Ratio.
+
+- [ ] Modify your current implementation of the Worker Pool to make it generic. A Generic Worker Pool should be able to create a pool of Workers specified at initialization. This modification should allow for the creation of an arbitrary number of Worker Pools. Depending on your current implementation, there might be a lot of things to change (or not).
+
+- [ ] Create 3 Worker Pools that would process the tweet stream in parallel. Each Pool will have the respective workers from the previous task.
+
+### Bonus Task
+
+- [ ] Add functionality to your system such that it would allow for computing the Engagement Ratio per User.
