@@ -6,8 +6,9 @@ This repository contains the second laboratory work for the Real-Time Programmin
 | Week 1               | :white_check_mark: |
 | Week 2               | :white_check_mark: |
 | Week 3               | :white_check_mark: |
-| Week 4               | :on:               |
-| Week 5               | :soon:             |
+| Week 4               | :white_check_mark: |
+| Week 5               | :on:               |
+| Week 6               | :soon:             |
 
 ## Diagrams
 
@@ -90,4 +91,48 @@ graph TD
     D[Printer Supervisor] --> F[Workers Manager];
     D[Printer Supervisor] --> G[Printers];
     D[Printer Supervisor] --> H[Hashtag Printer];
+```
+
+### Week 4
+
+#### Message Flow
+
+```mermaid
+sequenceDiagram
+Readers ->> Stream Processor Supervisor: get tweets
+Stream Processor Supervisor ->> Printer Supervisors: send to print tweets by pid
+Printer Supervisors ->> Load Balancers: acquire printer
+Load Balancers -->> Printer Supervisors: return first 3 printer ids with the least prints
+Load Balancers ->> Workers Managers: analyze the total nr of workers and prints
+Workers Managers ->> Printer Supervisors: manage nr of workers
+Printer Supervisors ->> Load Balancers: get id to either add or remove
+Load Balancers -->> Printer Supervisors: return id
+Printer Supervisors ->> Printers: send to first id received to print tweet
+Printers ->> Tweet Redacters: filter tweet
+Tweet Redacters -->> Printers: receive filtered tweet
+Printers ->> Sentiment Score Calculators: compute sentiment score
+Sentiment Score Calculator -->> Printers: receive sentiment score
+Printers ->> Engagement Ratio Calculators: compute engagement ratio per tweet
+Engagement Ratio Calculator -->> Printers: receive engagement ratio
+Printers ->> Load Balancer: release printer
+
+Readers ->> Hashtag Printer: get and print hashtags
+Readers ->> User Engagement Ratio Calculator: get and print hashtags
+```
+
+#### Supervision Tree
+
+```mermaid
+graph TD
+    A[Stream Processor Supervisor] --> B[Reader 1];
+    A[Stream Processor Supervisor] --> C[Reader 2];
+    A[Stream Processor Supervisor] --> D[Printer Supervisors];
+    A[Stream Processor Supervisor] --> H[Hashtag Printer];
+    A[Stream Processor Supervisor] --> I[User Engagement Ratio Calculator];
+    D[Printer Supervisors] --> E[Load Balancers];
+    D[Printer Supervisors] --> F[Workers Managers];
+    D[Printer Supervisors] --> G[Printers];
+    D[Printer Supervisors] --> J[Tweet Redacters];
+    D[Printer Supervisors] --> K[Sentiment Score Calculators];
+    D[Printer Supervisors] --> L[Engagement Ratio Calculators];
 ```

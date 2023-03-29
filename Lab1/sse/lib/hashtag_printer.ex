@@ -2,7 +2,7 @@ defmodule HashtagPrinter do
   use GenServer
 
   def start do
-    IO.puts("-> Hashtag Printer started\n")
+    IO.puts("\n-> Hashtag Printer started\n")
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 

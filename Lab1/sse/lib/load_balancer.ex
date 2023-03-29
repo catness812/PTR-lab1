@@ -3,19 +3,19 @@ defmodule LoadBalancer do
 
   def start(nr) do
     IO.puts("-> Load Balancer started\n")
-    GenServer.start_link(__MODULE__, Map.new(1..nr, fn count -> {count, 0} end), name: __MODULE__)
+    GenServer.start_link(__MODULE__, Map.new(1..nr, fn count -> {count, 0} end))
   end
 
   def init(state) do
     {:ok, state}
   end
 
-  def handle_call(:acquire_printer, _from, state) do
+  def handle_call({:acquire_printer, load_balancer_pid, workers_manager_pid, pid}, _from, state) do
     sorted_state = Enum.sort_by(state, fn {_key, v} -> v end)
     ids = sorted_state |> Enum.take(3) |> Enum.map(&elem(&1, 0))
     nr = map_size(state)
     count = state |> Map.values() |> Enum.sum()
-    WorkersManager.analyze_count(nr, count)
+    WorkersManager.analyze_count(workers_manager_pid, nr, count, pid, load_balancer_pid)
     {:reply, ids, state}
   end
 
@@ -51,27 +51,27 @@ defmodule LoadBalancer do
     {:noreply, state}
   end
 
-  def acquire_printer do
-    GenServer.call(__MODULE__, :acquire_printer)
+  def acquire_printer(load_balancer_pid, workers_manager_pid, pid) do
+    GenServer.call(load_balancer_pid, {:acquire_printer, load_balancer_pid, workers_manager_pid, pid})
   end
 
-  def release_worker(id, tweet) do
-    GenServer.cast(__MODULE__, {:release_printer, id, tweet})
+  def release_worker(load_balancer_pid, id, tweet) do
+    GenServer.cast(load_balancer_pid, {:release_printer, id, tweet})
   end
 
-  def check_state do
-    GenServer.call(__MODULE__, :check_state)
+  def check_state(load_balancer_pid) do
+    GenServer.call(load_balancer_pid, :check_state)
   end
 
-  def update_state(id) do
-    GenServer.cast(__MODULE__, {:update_state, id})
+  def update_state(load_balancer_pid, id) do
+    GenServer.cast(load_balancer_pid, {:update_state, id})
   end
 
-  def get_id do
-    GenServer.call(__MODULE__, :get_id)
+  def get_id(load_balancer_pid) do
+    GenServer.call(load_balancer_pid, :get_id)
   end
 
-  def remove_from_state(id) do
-    GenServer.cast(__MODULE__, {:remove_from_state, id})
+  def remove_from_state(load_balancer_pid, id) do
+    GenServer.cast(load_balancer_pid, {:remove_from_state, id})
   end
 end
