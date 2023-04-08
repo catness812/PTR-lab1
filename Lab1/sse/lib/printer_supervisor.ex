@@ -1,12 +1,12 @@
 defmodule PrinterSupervisor do
   use Supervisor
 
-  def create([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, pool_id]) do
+  def create([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, batch_size, time_window, pool_id]) do
     IO.puts("\n-> Printer Supervisor #{pool_id} started\n")
-    Supervisor.start_link(__MODULE__, [lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, pool_id])
+    Supervisor.start_link(__MODULE__, [lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, batch_size, time_window, pool_id])
   end
 
-  def init([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, pool_id]) do
+  def init([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, batch_size, time_window, pool_id]) do
     children = [
       %{
         id: "load_balancer#{pool_id}",
@@ -59,6 +59,22 @@ defmodule PrinterSupervisor do
         shutdown: 5000,
         type: :worker,
         max_restarts: 99999
+      },
+      %{
+        id: "batcher#{pool_id}",
+        start: {Batcher, :start, [[batch_size, time_window]]},
+        restart: :transient,
+        shutdown: 5000,
+        type: :worker,
+        max_restarts: 99999
+      },
+      %{
+        id: "aggregator#{pool_id}",
+        start: {Aggregator, :start, []},
+        restart: :transient,
+        shutdown: 5000,
+        type: :worker,
+        max_restarts: 99999
       }
     ]
 
@@ -74,16 +90,23 @@ defmodule PrinterSupervisor do
     Enum.reverse(Supervisor.which_children(pid))
   end
 
+  def send_time(pid, i, start_time) do
+    batcher_pid = get_worker(pid, "batcher#{i}")
+    Batcher.get_time(batcher_pid, start_time)
+  end
+
   def print(pid, i, tweet) do
     load_balancer_pid = get_worker(pid, "load_balancer#{i}")
     workers_manager_pid = get_worker(pid, "workers_manager#{i}")
     tweet_redacter_pid = get_worker(pid, "tweet_redacter#{i}")
     sentiment_score_comp_pid = get_worker(pid, "sentiment_score_comp#{i}")
     engagement_ratio_comp_pid = get_worker(pid, "engagement_ratio_comp#{i}")
+    batcher_pid = get_worker(pid, "batcher#{i}")
+    aggregator_pid = get_worker(pid, "aggregator#{i}")
     printer_ids = LoadBalancer.acquire_printer(load_balancer_pid, workers_manager_pid, pid)
     printer_pids = Enum.map(printer_ids, fn printer_id -> get_worker(pid, printer_id) end)
     printer_pid = hd(printer_pids)
-    Printer.print(printer_pid, {printer_pid, tweet, load_balancer_pid, tweet_redacter_pid, sentiment_score_comp_pid, engagement_ratio_comp_pid})
+    Printer.print(printer_pid, {printer_pid, tweet, load_balancer_pid, tweet_redacter_pid, sentiment_score_comp_pid, engagement_ratio_comp_pid, batcher_pid, aggregator_pid})
   end
 
   def create_new_worker(pid, state, load_balancer_pid) do

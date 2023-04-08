@@ -1,12 +1,12 @@
 defmodule StreamProcessorSupervisor do
   use Supervisor
 
-  def start([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, nr_of_pools]) do
-    {:ok, supervisor} = Supervisor.start_link(__MODULE__, [lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, nr_of_pools], name: __MODULE__)
+  def start([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, batch_size, time_window, nr_of_pools]) do
+    {:ok, supervisor} = Supervisor.start_link(__MODULE__, [lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, batch_size, time_window, nr_of_pools], name: __MODULE__)
     IO.puts("\n-> Stream Processor Supervisor started with PID #{inspect supervisor}")
   end
 
-  def init([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, nr_of_pools]) do
+  def init([lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, batch_size, time_window, nr_of_pools]) do
     children = [
       %{
         id: :reader1,
@@ -43,7 +43,7 @@ defmodule StreamProcessorSupervisor do
     ] ++ Enum.map(1..nr_of_pools, fn i ->
       %{
         id: i,
-        start: {PrinterSupervisor, :create, [[lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, i]]},
+        start: {PrinterSupervisor, :create, [[lambda, min_sleep_time, max_sleep_time, nr_of_workers, nr_of_requests, batch_size, time_window, i]]},
         restart: :transient,
         shutdown: 5000,
         type: :supervisor,
@@ -63,11 +63,13 @@ defmodule StreamProcessorSupervisor do
     Enum.reverse(Supervisor.which_children(__MODULE__))
   end
 
-  def print(nr_of_pools, msg) do
-    nr_of_pools = nr_of_pools |> hd()
-    for i <- 1..nr_of_pools do
-      pid = get_worker(i)
-      PrinterSupervisor.print(pid, i, msg)
-    end
+  def send_time(id, start_time) do
+    pid = get_worker(id)
+    PrinterSupervisor.send_time(pid, id, start_time)
+  end
+
+  def print(id, msg) do
+    pid = get_worker(id)
+    PrinterSupervisor.print(pid, id, msg)
   end
 end

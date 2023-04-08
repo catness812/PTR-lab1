@@ -91,16 +91,16 @@ Use the one-for-one restart policy.
 
 ### Minimal Task
 
-- [ ] Create an actor that would collect the redacted tweets from Workers and would print them in batches. Instead of printing the tweets, the Worker should now send them to the Batcher, which then prints them. The batch size should be parametrizable.
+- [x] Create an actor that would collect the redacted tweets from Workers and would print them in batches. Instead of printing the tweets, the Worker should now send them to the Batcher, which then prints them. The batch size should be parametrizable.
 
 ### Main Task
 
-- [ ] Create an actor that would collect the redacted tweets, their Sentiment Scores and their Engagement Ratios and would aggregate them together. Instead of sending the tweets to the Batcher, the Worker should now send them to the Aggregator. It should then send the data to the Batcher if a matching set is found.
+- [x] Create an actor that would collect the redacted tweets, their Sentiment Scores and their Engagement Ratios and would aggregate them together. Instead of sending the tweets to the Batcher, the Worker should now send them to the Aggregator. It should then send the data to the Batcher if a matching set is found.
 
-- [ ] Continue your Batcher actor. If, in a given time window, the Batcher does not receive enough data to print a batch, it should still print it. Of course, the actor should retain any existing behaviour. The time window should be parametrizable.
+- [x] Continue your Batcher actor. If, in a given time window, the Batcher does not receive enough data to print a batch, it should still print it. Of course, the actor should retain any existing behaviour. The time window should be parametrizable.
 
 ### Bonus Task
 
-- [ ] Modify your current system to be able to handle retweets. Notice that some tweets are actually retweets and contain a special field `retweet_status`. The system should extract the retweets and treat them as separate tweets.
+- [x] Modify your current system to be able to handle retweets. Notice that some tweets are actually retweets and contain a special field `retweet_status`. The system should extract the retweets and treat them as separate tweets.
 
-- [ ] Modify your current implementation of Aggregator / Batcher communication. Implement the ”Reactive Pull” backpressure mechanism between the actors.
+- [x] Modify your current implementation of Aggregator / Batcher communication. Implement the ”Reactive Pull” backpressure mechanism between the actors.

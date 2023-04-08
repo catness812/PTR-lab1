@@ -11,15 +11,16 @@ defmodule TweetRedacter do
     {:ok, %{bad_words: bad_words}}
   end
 
-  def handle_call({:redact, tweet}, _from, state) do
+  def handle_cast({:redact, aggregator_pid, batcher_pid, tweet_id, tweet}, state) do
     tweet_text = Map.get(tweet, :tweet)
     filtered_tweet = Enum.reduce(state.bad_words, tweet_text, fn bad_word, acc ->
       String.replace(acc, bad_word, String.duplicate("*", String.length(bad_word)))
     end)
-    {:reply, filtered_tweet, state}
+    Aggregator.collect_filtered_tweet(aggregator_pid, batcher_pid, tweet_id, filtered_tweet)
+    {:noreply, state}
   end
 
-  def redact(tweet_redacter_pid, tweet) do
-    GenServer.call(tweet_redacter_pid, {:redact, tweet})
+  def redact(tweet_redacter_pid, aggregator_pid, batcher_pid, tweet_id, tweet) do
+    GenServer.cast(tweet_redacter_pid, {:redact, aggregator_pid, batcher_pid, tweet_id, tweet})
   end
 end

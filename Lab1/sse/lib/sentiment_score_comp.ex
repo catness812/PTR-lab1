@@ -20,7 +20,7 @@ defmodule SentimentScoreComp do
     end
   end
 
-  def handle_call({:compute, tweet}, _from, state) do
+  def handle_cast({:compute, aggregator_pid, tweet_id, tweet}, state) do
     tweet_text = Map.get(tweet, :tweet)
     words = Regex.replace(~r/RT\s.*?:/, tweet_text, "")
         |> String.downcase()
@@ -35,10 +35,11 @@ defmodule SentimentScoreComp do
           end
         end)
         sentiment_score = emotional_score / length(words)
-    {:reply, sentiment_score, state}
+        Aggregator.collect_sentiment_score(aggregator_pid, tweet_id, sentiment_score)
+    {:noreply, state}
   end
 
-  def compute(sentiment_score_comp_pid, tweet) do
-    GenServer.call(sentiment_score_comp_pid, {:compute, tweet})
+  def compute(sentiment_score_comp_pid, aggregator_pid, tweet_id, tweet) do
+    GenServer.cast(sentiment_score_comp_pid, {:compute, aggregator_pid, tweet_id, tweet})
   end
 end

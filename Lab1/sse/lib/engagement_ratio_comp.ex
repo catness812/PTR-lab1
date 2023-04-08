@@ -10,17 +10,19 @@ defmodule EngagementRatioComp do
     {:ok, state}
   end
 
-  def handle_call({:compute, tweet}, _from, state) do
+  def handle_cast({:compute, aggregator_pid, tweet_id, tweet}, state) do
     if Map.get(tweet, :followers) != 0 do
       engagement_ratio = (Map.get(tweet, :favorites) + Map.get(tweet, :retweets)) / Map.get(tweet, :followers)
-      {:reply, engagement_ratio, state}
+      Aggregator.collect_engagement_ratio(aggregator_pid, tweet_id, engagement_ratio)
+      {:noreply, state}
     else
       engagement_ratio = 0.0
-      {:reply, engagement_ratio, state}
+      Aggregator.collect_engagement_ratio(aggregator_pid, tweet_id, engagement_ratio)
+      {:noreply, state}
     end
   end
 
-  def compute(engagement_ratio_comp_pid, tweet) do
-    GenServer.call(engagement_ratio_comp_pid, {:compute, tweet})
+  def compute(engagement_ratio_comp_pid, aggregator_pid, tweet_id, tweet) do
+    GenServer.cast(engagement_ratio_comp_pid, {:compute, aggregator_pid, tweet_id, tweet})
   end
 end

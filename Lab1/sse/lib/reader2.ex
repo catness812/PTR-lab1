@@ -3,14 +3,21 @@ defmodule Reader2 do
 
   def start(nr_of_pools) do
     IO.puts("\n-> Reader 2 started")
-    GenServer.start_link(__MODULE__, [nr_of_pools], name: __MODULE__)
+    GenServer.start_link(__MODULE__, nr_of_pools, name: __MODULE__)
   end
 
   def init(nr_of_pools) do
-    {:ok, %{nr_of_pools: nr_of_pools}}
+    state = %{}
+    state = Enum.reduce(1..nr_of_pools, state, fn(key, acc) ->
+      Map.put(acc, key, 0)
+    end)
+    {:ok, state}
   end
 
   def handle_cast(:get_tweets, state) do
+    id = Enum.min_by(state, fn {_key, value} -> value end) |> elem(0)
+    start_time = Time.utc_now
+    StreamProcessorSupervisor.send_time(id, start_time)
     HTTPoison.get("http://localhost:4000/tweets/2", [], [recv_timeout: :infinity, stream_to: self()])
     {:noreply, state}
   end
@@ -34,52 +41,52 @@ defmodule Reader2 do
   end
 
   def handle_info(%HTTPoison.AsyncChunk{chunk: chunk}, state) do
-    get_tweets(state.nr_of_pools, chunk)
+    id = Enum.min_by(state, fn {_key, value} -> value end) |> elem(0)
+    if String.length(chunk) > 0 do
+      "event: \"message\"\n\ndata: " <> response = chunk
+      {status, tweets} = Jason.decode(String.trim(response))
+      case status do
+        :ok ->
+          if Map.has_key?(tweets["message"]["tweet"], "retweeted_status") do
+            tweet = tweets["message"]["tweet"]["retweeted_status"]["text"]
+            favourites = tweets["message"]["tweet"]["retweeted_status"]["favorite_count"]
+            retweets = tweets["message"]["tweet"]["retweeted_status"]["retweet_count"]
+            followers = tweets["message"]["tweet"]["retweeted_status"]["user"]["followers_count"]
+            event_data = %{
+              tweet: tweet,
+              favorites: favourites,
+              retweets: retweets,
+              followers: followers
+            }
+            StreamProcessorSupervisor.print(id, event_data)
+          else
+            tweet = tweets["message"]["tweet"]["text"]
+            favourites = tweets["message"]["tweet"]["favorite_count"]
+            retweets = tweets["message"]["tweet"]["retweet_count"]
+            followers = tweets["message"]["tweet"]["user"]["followers_count"]
+            event_data = %{
+              tweet: tweet,
+              favorites: favourites,
+              retweets: retweets,
+              followers: followers
+            }
+            StreamProcessorSupervisor.print(id, event_data)
+          end
+        :error -> StreamProcessorSupervisor.print(id, :kill)
+      end
+    end
+    state = state |> Map.update(id, 0, fn v -> v + 1 end)
     {:noreply, state}
   end
 
   def handle_info(%HTTPoison.AsyncEnd{}, state) do
+    IO.puts("\n-> Stream ended\n")
     {:noreply, state}
   end
 
   def get_data do
     GenServer.cast(__MODULE__, :get_tweets)
     :getting_data
-  end
-
-  def get_tweets(nr_of_pools, chunk) do
-    if String.length(chunk) > 0 do
-      "event: \"message\"\n\ndata: " <> response = chunk
-      {status, tweets} = Jason.decode(String.trim(response))
-      case status do
-        :ok -> tweet = tweets
-                |> Map.get("message")
-                |> Map.get("tweet")
-                |> Map.get("text")
-               favourites = tweets
-                |> Map.get("message")
-                |> Map.get("tweet")
-                |> Map.get("favorite_count")
-               retweets = tweets
-                |> Map.get("message")
-                |> Map.get("tweet")
-                |> Map.get("retweet_count")
-               followers = tweets
-                |> Map.get("message")
-                |> Map.get("tweet")
-                |> Map.get("user")
-                |> Map.get("followers_count")
-
-               event_data = %{
-                tweet: tweet,
-                favorites: favourites,
-                retweets: retweets,
-                followers: followers
-               }
-               StreamProcessorSupervisor.print(nr_of_pools, event_data)
-        :error -> StreamProcessorSupervisor.print(nr_of_pools, :kill)
-      end
-    end
   end
 
   def send_to_hashtag_printer do

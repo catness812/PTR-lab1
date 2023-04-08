@@ -44,6 +44,7 @@ defmodule HashtagPrinter do
   end
 
   def handle_info(%HTTPoison.AsyncEnd{}, state) do
+    IO.puts("\n-> Stream ended\n")
     {:noreply, state}
   end
 
