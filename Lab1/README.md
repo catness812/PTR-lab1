@@ -104,3 +104,19 @@ Use the one-for-one restart policy.
 - [x] Modify your current system to be able to handle retweets. Notice that some tweets are actually retweets and contain a special field `retweet_status`. The system should extract the retweets and treat them as separate tweets.
 
 - [x] Modify your current implementation of Aggregator / Batcher communication. Implement the ”Reactive Pull” backpressure mechanism between the actors.
+
+## Week 6
+
+### Minimal Task
+
+- [x] Create a database that would store the tweets processed by your system.
+
+- [x] Continue your Batcher actor. Instead of printing the batches of tweets, the actor should now send them to the database, which will persist them.
+
+### Main Task
+
+- [x] Continue your database implementation. Persist Users and Tweets in separate tables or collections. Make sure not to lose which user posted which tweets.
+
+### Bonus Task
+
+- [x] Continue your Batcher actor. Implement a resumable / pausable transmission towards the database (e.g. in case of DB unavailability).

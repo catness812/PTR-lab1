@@ -48,11 +48,13 @@ defmodule Reader2 do
       case status do
         :ok ->
           if Map.has_key?(tweets["message"]["tweet"], "retweeted_status") do
+            user = tweets["message"]["tweet"]["retweeted_status"]["user"]["screen_name"]
             tweet = tweets["message"]["tweet"]["retweeted_status"]["text"]
             favourites = tweets["message"]["tweet"]["retweeted_status"]["favorite_count"]
             retweets = tweets["message"]["tweet"]["retweeted_status"]["retweet_count"]
             followers = tweets["message"]["tweet"]["retweeted_status"]["user"]["followers_count"]
             event_data = %{
+              user: user,
               tweet: tweet,
               favorites: favourites,
               retweets: retweets,
@@ -60,11 +62,13 @@ defmodule Reader2 do
             }
             StreamProcessorSupervisor.print(id, event_data)
           else
+            user = tweets["message"]["tweet"]["user"]["screen_name"]
             tweet = tweets["message"]["tweet"]["text"]
             favourites = tweets["message"]["tweet"]["favorite_count"]
             retweets = tweets["message"]["tweet"]["retweet_count"]
             followers = tweets["message"]["tweet"]["user"]["followers_count"]
             event_data = %{
+              user: user,
               tweet: tweet,
               favorites: favourites,
               retweets: retweets,

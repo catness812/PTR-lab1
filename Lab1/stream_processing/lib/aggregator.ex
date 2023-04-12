@@ -10,12 +10,13 @@ defmodule Aggregator do
     {:ok, %{}}
   end
 
-  def handle_cast({:collect_filtered_tweet, aggregator_pid, batcher_pid, tweet_id, filtered_tweet}, state) do
-    Aggregator.check_state(aggregator_pid, batcher_pid, tweet_id)
+  def handle_cast({:collect_filtered_tweet, tweet_id, tweet_user, filtered_tweet}, state) do
     if Map.has_key?(state, tweet_id) do
+      state = Map.put(state, tweet_id, Map.put(state[tweet_id], :tweet_user, tweet_user))
       state = Map.put(state, tweet_id, Map.put(state[tweet_id], :filtered_tweet, filtered_tweet))
       {:noreply, state}
     else
+      state = Map.put(state, tweet_id, %{tweet_user: tweet_user})
       state = Map.put(state, tweet_id, %{filtered_tweet: filtered_tweet})
       {:noreply, state}
     end
@@ -42,21 +43,25 @@ defmodule Aggregator do
   end
 
   def handle_cast({:check_state, batcher_pid, tweet_id}, state) do
-    case Batcher.request_data(batcher_pid) do
-      true ->
-        if Map.has_key?(state, tweet_id) and is_map(state[tweet_id]) do
-          if map_size(state[tweet_id]) == 3 do
-            Batcher.collect_data(batcher_pid, state[tweet_id])
-            {:noreply, state}
+    if Ecto.Adapters.SQL.Sandbox.checkout(StreamProcessing.Repo) == :ok or Ecto.Adapters.SQL.Sandbox.checkout(StreamProcessing.Repo) == {:already, :owner} do
+      case Process.alive?(batcher_pid) do
+        true ->
+          if Map.has_key?(state, tweet_id) and is_map(state[tweet_id]) do
+            if map_size(state[tweet_id]) == 4 do
+              Batcher.collect_data(batcher_pid, state[tweet_id])
+              {:noreply, state}
+            end
           end
-        end
-      _ -> IO.puts("\n-> Batcher not available.\n")
+        _ ->
+          IO.puts("\n-> Batcher not available.\n")
+          {:noreply, state}
+      end
+      {:noreply, state}
     end
-    {:noreply, state}
   end
 
-  def collect_filtered_tweet(aggregator_pid, batcher_pid, tweet_id, filtered_tweet) do
-    GenServer.cast(aggregator_pid, {:collect_filtered_tweet, aggregator_pid, batcher_pid, tweet_id, filtered_tweet})
+  def collect_filtered_tweet(aggregator_pid, tweet_id, tweet_user, filtered_tweet) do
+    GenServer.cast(aggregator_pid, {:collect_filtered_tweet, tweet_id, tweet_user, filtered_tweet})
   end
 
   def collect_sentiment_score(aggregator_pid, tweet_id, sentiment_score) do
